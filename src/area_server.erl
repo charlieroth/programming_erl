@@ -1,16 +1,30 @@
 -module(area_server).
--export([loop/0]).
-
+-export([loop/0, rpc/2]).
 -import(geometry, [area/1]).
+
+rpc(Pid, Request) ->
+    Pid ! {self(), Request},
+    receive
+        {Pid, Response} -> Response
+    end.
 
 loop() ->
     receive
-        {rectangle, _Width, _Height} = Message ->
-            Area = area(Message),
-            io:format("Area of rectangle is ~p~n", [Area]),
+        {From, {rectangle, Width, Height}} ->
+            Area = area({rectangle, Width, Height}),
+            From ! {self(), Area},
             loop();
-        {square, _Side} = Message ->
-            Area = area(Message),
-            io:format("Area of square is ~p~n", [Area]),
+        {From, {square, Side}} ->
+            Area = area({square, Side}),
+            From ! {self(), Area},
+            loop();
+        {From, {circle, Radius}} ->
+            Area = area({circle, Radius}),
+            From ! {self(), Area},
+            loop();
+        {From, Other} ->
+            From ! {self(), {error, Other}},
             loop()
     end.
+    
+
